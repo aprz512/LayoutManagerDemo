@@ -143,8 +143,9 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
 
         // 根据 scroll 的距离来计算 firstPos 的位置
         firstVisiblePos = floor(abs(scrollX).toDouble() / unitDistance).toInt()
+        // 该值会动态更新
+        lastVisiblePos = state.itemCount - 1
 
-        var visibleViewCount = 0
         val frac = (scrollX % unitDistance) / (unitDistance * 1f)
         val stackOffset = (frac * stackGap).toInt()
         val viewOffset = (frac * unitDistance).toInt()
@@ -152,21 +153,19 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
         var stackOffsetDone = false
         var viewOffsetDone = false
 
-        // 不要被这个 true 吓到了
-        while (true) {
+
+        for (i in  firstVisiblePos until lastVisiblePos) {
+
             // 属于堆叠区域：
             // 但是这里就会有一个问题，这个 layoutManager 一初始化就会堆叠起来，导致前面几个的内容看不到了
             // 解决办法就是做出一个无限循环的效果，这样就会对数目有所限制，至少是知道有多少数据
             // 或者是做成动态的，一开始不会堆叠， 滑动的时候再考虑如何堆叠
-
-            if (firstVisiblePos + visibleViewCount < MAX_STACK_COUNT) {
+            if (i - firstVisiblePos < MAX_STACK_COUNT) {
                 if (!stackOffsetDone) {
                     left += stackOffset
                     stackOffsetDone = true
                 }
-
                 left += stackGap
-
             } else {
                 if (!viewOffsetDone) {
                     left += viewOffset
@@ -176,11 +175,11 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             }
 
             if (left > width - paddingRight) {
-                lastVisiblePos = firstVisiblePos + visibleViewCount
+                lastVisiblePos = i
                 break
             }
 
-            val view = recycler.getViewForPosition(visibleViewCount)
+            val view = recycler.getViewForPosition(i)
             addView(view)
             measureChildWithMargins(view, 0, 0)
 
@@ -189,9 +188,8 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             val r = l + getDecoratedMeasuredWidth(view)
             val b = t + getDecoratedMeasuredHeight(view)
             layoutDecoratedWithMargins(view, l, t, r, b)
-
-            visibleViewCount++
         }
+
     }
 
     private fun reachBound(dx: Int): Boolean {
