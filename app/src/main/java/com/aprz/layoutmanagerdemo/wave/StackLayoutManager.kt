@@ -145,6 +145,13 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
         firstVisiblePos = floor(abs(scrollX).toDouble() / unitDistance).toInt()
 
         var visibleViewCount = 0
+        val frac = (scrollX % unitDistance) / (unitDistance * 1f)
+        val stackOffset = (frac * stackGap).toInt()
+        val viewOffset = (frac * unitDistance).toInt()
+
+        var stackOffsetDone = false
+        var viewOffsetDone = false
+
         // 不要被这个 true 吓到了
         while (true) {
             // 属于堆叠区域：
@@ -152,10 +159,20 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             // 解决办法就是做出一个无限循环的效果，这样就会对数目有所限制，至少是知道有多少数据
             // 或者是做成动态的，一开始不会堆叠， 滑动的时候再考虑如何堆叠
 
-            left += if (firstVisiblePos + visibleViewCount < MAX_STACK_COUNT) {
-                stackGap
+            if (firstVisiblePos + visibleViewCount < MAX_STACK_COUNT) {
+                if (!stackOffsetDone) {
+                    left += stackOffset
+                    stackOffsetDone = true
+                }
+
+                left += stackGap
+
             } else {
-                unitDistance
+                if (!viewOffsetDone) {
+                    left += viewOffset
+                    viewOffsetDone = true
+                }
+                left += unitDistance
             }
 
             if (left > width - paddingRight) {
