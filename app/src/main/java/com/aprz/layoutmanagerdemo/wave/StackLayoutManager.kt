@@ -104,18 +104,16 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
         dx: Int
     ): Int {
 
-        var result = 0
+        var result: Int
 
         if (reachBound(dx)) {
             result = 0
-        }
-
-        if (dx < 0 && scrollX < -dx) {
+        } else if (dx < 0 && scrollX < -dx) {
             result = scrollX
-        }
-
-        if (dx > 0 && scrollX + dx > width - paddingRight) {
+        } else if (dx > 0 && scrollX + dx > width - paddingRight) {
             result = width - paddingRight - scrollX
+        } else {
+            result = dx
         }
 
         layoutChildren(recycler, state)
