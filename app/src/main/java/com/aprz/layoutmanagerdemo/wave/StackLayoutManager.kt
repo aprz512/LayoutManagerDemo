@@ -1,6 +1,7 @@
 package com.aprz.layoutmanagerdemo.wave
 
 import android.graphics.Path
+import android.util.Log
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.*
@@ -90,7 +91,11 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
 
         val distance = fill(recycler, state, dx)
 
+        // 这里改为负值，手指就可以从右往左拖动了
+        // 但是无法从左往右拖动
         scrollX += distance
+
+        Log.e("d", "$dx")
 
         return distance
     }
@@ -146,7 +151,7 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
         // 该值会动态更新
         lastVisiblePos = state.itemCount - 1
 
-        val frac = (scrollX % unitDistance) / (unitDistance * 1f)
+        val frac = (abs(scrollX) % unitDistance) / (unitDistance * 1f)
         val stackOffset = (frac * stackGap).toInt()
         val viewOffset = (frac * unitDistance).toInt()
 
@@ -174,6 +179,7 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
                 left += unitDistance
             }
 
+            // 超过右边，就不放 item 了
             if (left > width - paddingRight) {
                 lastVisiblePos = i
                 break
