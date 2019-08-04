@@ -3,6 +3,7 @@ package com.aprz.layoutmanagerdemo
 import android.graphics.Color
 import android.graphics.Rect
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -44,10 +45,12 @@ class StackAdapter : RecyclerView.Adapter<StackViewHolder>() {
     override fun getItemCount() = 20
 
     override fun onBindViewHolder(holder: StackViewHolder, position: Int) {
+        Log.e("tetg", "onBindViewHolder + $position")
         holder.bind(position)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StackViewHolder {
+        Log.e("tetg", "onCreateViewHolder")
         val root = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_stack, parent, false)
         return StackViewHolder(root)

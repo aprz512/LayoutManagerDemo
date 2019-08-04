@@ -2,11 +2,15 @@ package com.aprz.layoutmanagerdemo.wave
 
 import android.graphics.Path
 import android.util.Log
+import android.util.Range
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.*
 import kotlin.math.abs
 import kotlin.math.floor
+import java.nio.file.Files.size
+
+
 
 /**
  * @author by liyunlei
@@ -28,7 +32,7 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
     private var maxScrollX = 0
 
     companion object {
-        const val MAX_STACK_COUNT = 6
+        const val MAX_STACK_COUNT = 2
     }
 
     fun setPath(path: Path) {
@@ -169,6 +173,21 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             }
         }
 
+
+
+        recycleChildren(recycler)
+
+    }
+
+    /**
+     * 回收需回收的Item。
+     */
+    private fun recycleChildren(recycler: Recycler) {
+        val scrapList = recycler.scrapList
+        for (i in scrapList.indices) {
+            val holder = scrapList[i]
+            removeAndRecycleView(holder.itemView, recycler)
+        }
     }
 
     /**
