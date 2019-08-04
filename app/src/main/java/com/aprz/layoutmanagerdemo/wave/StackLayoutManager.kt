@@ -25,6 +25,7 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
     private var unitDistance = -1
     private val gap = 20
     private val stackGap = 10
+    private var maxScrollX = 0
 
     companion object {
         const val MAX_STACK_COUNT = 6
@@ -69,18 +70,7 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             return
         }
 
-//        recycler?.apply {
-//            detachAndScrapAttachedViews(this)
-//        }
-
-//        resetChildWidth()
-
-        fill(recycler, state, 0)
-
-    }
-
-    private fun resetChildWidth() {
-        unitDistance = -1
+        layoutChildren(recycler, state)
     }
 
     override fun scrollHorizontallyBy(dx: Int, recycler: Recycler?, state: State?): Int {
@@ -89,41 +79,11 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             return 0
         }
 
-        val distance = fill(recycler, state, dx)
-
-        // 这里改为负值，手指就可以从右往左拖动了
-        // 但是无法从左往右拖动
-        scrollX += distance
-
-        Log.e("d", "$dx")
-
-        return distance
-    }
-
-    /**
-     * dx(dy) 表示本次较于上一次的偏移量，<0为 向右(下) 滚动，>0为向左(上) 滚动；
-     */
-    private fun fill(
-        recycler: Recycler?,
-        state: State?,
-        dx: Int
-    ): Int {
-
-        var result: Int
-
-        if (reachBound(dx)) {
-            result = 0
-        } else if (dx < 0 && scrollX < -dx) {
-            result = scrollX
-        } else if (dx > 0 && scrollX + dx > width - paddingRight) {
-            result = width - paddingRight - scrollX
-        } else {
-            result = dx
-        }
-
         layoutChildren(recycler, state)
 
-        return result
+        Log.e("con", "${consume(dx)}")
+
+        return consume(dx)
     }
 
     private fun layoutChildren(
@@ -151,7 +111,8 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
         // 该值会动态更新
         lastVisiblePos = state.itemCount - 1
 
-        val frac = (abs(scrollX) % unitDistance) / (unitDistance * 1f)
+
+        val frac: Float = (abs(scrollX) % unitDistance) / (unitDistance * 1f)
         val stackOffset = (frac * stackGap).toInt()
         val viewOffset = (frac * unitDistance).toInt()
 
@@ -159,7 +120,7 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
         var viewOffsetDone = false
 
 
-        for (i in  firstVisiblePos until lastVisiblePos) {
+        for (i in firstVisiblePos until lastVisiblePos) {
 
             // 属于堆叠区域：
             // 但是这里就会有一个问题，这个 layoutManager 一初始化就会堆叠起来，导致前面几个的内容看不到了
@@ -167,13 +128,21 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             // 或者是做成动态的，一开始不会堆叠， 滑动的时候再考虑如何堆叠
             if (i - firstVisiblePos < MAX_STACK_COUNT) {
                 if (!stackOffsetDone) {
-                    left += stackOffset
+                    // 明白为什么item的移动方向会与手指的滑动方向相反了
+                    // 手指向左滑动，则 scrollX 的值会越来越大，frac 也会慢慢变大（0 -> 1 为一个周期）
+                    // 所以 item 会向右移动
+                    // 这里需要减去
+                    left -= stackOffset
                     stackOffsetDone = true
                 }
                 left += stackGap
             } else {
                 if (!viewOffsetDone) {
-                    left += viewOffset
+                    // 明白为什么item的移动方向会与手指的滑动方向相反了
+                    // 手指向左滑动，则 scrollX 的值会越来越大，frac 也会慢慢变大（0 -> 1 为一个周期）
+                    // 所以 item 会向右移动
+                    // 这里需要减去
+                    left -= viewOffset
                     viewOffsetDone = true
                 }
                 left += unitDistance
@@ -194,28 +163,51 @@ class StackLayoutManager : RecyclerView.LayoutManager() {
             val r = l + getDecoratedMeasuredWidth(view)
             val b = t + getDecoratedMeasuredHeight(view)
             layoutDecoratedWithMargins(view, l, t, r, b)
+
+            if (i == MAX_STACK_COUNT - 1 && frac == 0f) {
+                maxScrollX = (itemCount - i) * unitDistance
+            }
         }
 
     }
 
-    private fun reachBound(dx: Int): Boolean {
+    /**
+     * dx(dy) 表示本次较于上一次的偏移量，<0为 向右(下) 滚动，>0为向左(上) 滚动；
+     * 这个算法还是无法满足 fling 的要求，fling 的时候 停留的位置不对
+     * 查了一些资料，可能还需要自定义一个 SnapHelper -> https://www.jianshu.com/p/0e4a93d8e2de
+     */
+    private fun consume(dx: Int): Int {
+        val consumed: Int
         // dx < 0 表示向右滚动，需要显示左边的内容
         if (dx < 0) {
             // 到了最左边
-            if (scrollX <= 0) {
-                return true
+            if (scrollX + dx < 0) {
+                consumed = if (scrollX > 0) {
+                    dx - scrollX
+                } else {
+                    0
+                }
+                scrollX = 0
+                return consumed
             }
         }
 
         // dx > 0 表示向左滚动，右边的内容需要显示出来
         if (dx > 0) {
-            // 到了最右边
-            if (lastVisiblePos - firstVisiblePos <= MAX_STACK_COUNT - 1) {
-                return true
+            if (scrollX + dx > maxScrollX) {
+                consumed = if (scrollX < maxScrollX) {
+                    maxScrollX - scrollX
+                } else {
+                    0
+                }
+                scrollX = maxScrollX
+                return consumed
             }
         }
 
-        return false
+        scrollX += dx
+
+        return dx
     }
 
 
